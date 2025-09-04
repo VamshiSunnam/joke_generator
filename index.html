@@ -78,7 +78,6 @@
         </div>
     </div>
 
-    <script src="config.js"></script>
     <script>
         // Get references to the chat elements
         const chatForm = document.getElementById('chat-form');
@@ -88,7 +87,8 @@
 
         const toldJokes = new Set(JSON.parse(localStorage.getItem('toldJokes')) || []);
         
-        const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${config.apiKey}`;
+        const apiKey = "AIzaSyAoQw6n1tmS7qy70ETJ07oPGLJaoB_CWPw";
+        const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`;
 
         let isLoading = false;
 
