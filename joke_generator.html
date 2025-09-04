@@ -43,7 +43,7 @@
             word-wrap: break-word;
         }
         .user-message {
-            background-color: #1c9bef;
+            background-color: #00529B;
             color: #ffffff;
             align-self: flex-end;
             border-bottom-right-radius: 0.5rem;
@@ -58,7 +58,7 @@
 </head>
 <body>
     <div class="chat-container">
-        <div class="chat-history" id="chat-history">
+        <div class="chat-history" id="chat-history" aria-live="polite" aria-atomic="true">
             <!-- Initial bot message -->
             <div class="chat-message bot-message">
                 Hello! I'm a joke bot.
@@ -78,6 +78,7 @@
         </div>
     </div>
 
+    <script src="config.js"></script>
     <script>
         // Get references to the chat elements
         const chatForm = document.getElementById('chat-form');
@@ -85,10 +86,9 @@
         const chatHistory = document.getElementById('chat-history');
         const sendButton = document.getElementById('send-button');
 
-        const toldJokes = new Set();
+        const toldJokes = new Set(JSON.parse(localStorage.getItem('toldJokes')) || []);
         
-        const apiKey = "AIzaSyAoQw6n1tmS7qy70ETJ07oPGLJaoB_CWPw";
-        const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`;
+        const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${config.apiKey}`;
 
         let isLoading = false;
 
@@ -158,6 +158,7 @@
                     if (generatedText && !toldJokes.has(generatedText)) {
                         joke = generatedText;
                         toldJokes.add(joke);
+                        localStorage.setItem('toldJokes', JSON.stringify([...toldJokes]));
                     }
                 }
 
