@@ -57,6 +57,16 @@
     </style>
 </head>
 <body>
+    <div id="api-key-container" class="p-4 bg-gray-100 border-b border-gray-200">
+        <h2 class="text-lg font-semibold mb-2">Enter your Gemini API Key</h2>
+        <div class="flex gap-2">
+            <input type="password" id="api-key-input" placeholder="Your API Key" class="flex-grow p-3 bg-white border border-gray-300 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500">
+            <button id="save-api-key-button" class="px-6 bg-blue-500 text-white font-semibold hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 rounded-full">Save</button>
+        </div>
+    </div>
+    <div class="p-4 bg-gray-100 border-b border-gray-200" id="change-api-key-container" style="display: none;">
+        <button id="change-api-key-button" class="px-6 bg-gray-300 text-gray-700 font-semibold hover:bg-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-500 rounded-full">Change API Key</button>
+    </div>
     <div class="chat-container">
         <div class="chat-history" id="chat-history" aria-live="polite" aria-atomic="true">
             <!-- Initial bot message -->
@@ -85,12 +95,45 @@
         const chatHistory = document.getElementById('chat-history');
         const sendButton = document.getElementById('send-button');
 
+        // Get references to the API key elements
+        const apiKeyContainer = document.getElementById('api-key-container');
+        const apiKeyInput = document.getElementById('api-key-input');
+        const saveApiKeyButton = document.getElementById('save-api-key-button');
+        const changeApiKeyContainer = document.getElementById('change-api-key-container');
+        const changeApiKeyButton = document.getElementById('change-api-key-button');
+
         const toldJokes = new Set(JSON.parse(localStorage.getItem('toldJokes')) || []);
         
-        const apiKey = "AIzaSyAoQw6n1tmS7qy70ETJ07oPGLJaoB_CWPw";
-        const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`;
-
         let isLoading = false;
+
+        function getApiKey() {
+            return localStorage.getItem('gemini-api-key');
+        }
+
+        function setupApiKey() {
+            const apiKey = getApiKey();
+            if (apiKey) {
+                apiKeyContainer.style.display = 'none';
+                changeApiKeyContainer.style.display = 'block';
+            } else {
+                apiKeyContainer.style.display = 'block';
+                changeApiKeyContainer.style.display = 'none';
+            }
+        }
+
+        saveApiKeyButton.addEventListener('click', () => {
+            const apiKey = apiKeyInput.value.trim();
+            if (apiKey) {
+                localStorage.setItem('gemini-api-key', apiKey);
+                setupApiKey();
+            }
+        });
+
+        changeApiKeyButton.addEventListener('click', () => {
+            apiKeyInput.value = '';
+            apiKeyContainer.style.display = 'block';
+            changeApiKeyContainer.style.display = 'none';
+        });
 
         /**
          * Adds a new message to the chat history.
@@ -116,6 +159,12 @@
          * @param {string} keyword The user-provided keyword.
          */
         async function fetchJokeAndDisplay(keyword) {
+            const apiKey = getApiKey();
+            if (!apiKey) {
+                addMessage("Please enter your API key to get a joke.", 'bot');
+                return;
+            }
+
             if (isLoading) return;
             isLoading = true;
             userInput.disabled = true;
@@ -131,6 +180,7 @@
                 let joke = null;
                 let attempts = 0;
                 const maxAttempts = 5;
+                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`;
 
                 while (!joke && attempts < maxAttempts) {
                     attempts++;
@@ -205,6 +255,9 @@
             fetchJokeAndDisplay(userText);
             userInput.value = '';
         });
+
+        // Initial setup
+        setupApiKey();
 
     </script>
 </body>
