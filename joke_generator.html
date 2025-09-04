@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Joke Chatbot</title>
+    <!-- Use Tailwind CSS for a clean, responsive design -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f3f4f6;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+        }
+        .chat-container {
+            width: 100%;
+            max-width: 500px;
+            height: 80vh;
+            display: flex;
+            flex-direction: column;
+            background-color: #ffffff;
+            border-radius: 1.5rem;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+            overflow: hidden;
+        }
+        .chat-history {
+            flex-grow: 1;
+            padding: 1.5rem;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+        .chat-message {
+            max-width: 80%;
+            padding: 0.75rem 1rem;
+            border-radius: 1.25rem;
+            word-wrap: break-word;
+        }
+        .user-message {
+            background-color: #1c9bef;
+            color: #ffffff;
+            align-self: flex-end;
+            border-bottom-right-radius: 0.5rem;
+        }
+        .bot-message {
+            background-color: #e5e7eb;
+            color: #1f2937;
+            align-self: flex-start;
+            border-bottom-left-radius: 0.5rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="chat-container">
+        <div class="chat-history" id="chat-history">
+            <!-- Initial bot message -->
+            <div class="chat-message bot-message">
+                Hello! I'm a joke bot.
+                <br>
+                Type any keyword to get a joke!
+            </div>
+        </div>
+        <div class="p-4 bg-gray-100 border-t border-gray-200">
+            <form id="chat-form" class="flex flex-col gap-2">
+                <div class="flex rounded-full overflow-hidden">
+                    <input type="text" id="user-input" placeholder="Type a keyword for a joke..." class="flex-grow p-3 bg-white border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 rounded-l-full">
+                    <button type="submit" id="send-button" class="px-6 bg-blue-500 text-white font-semibold hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 rounded-r-full">
+                        Send
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        // Get references to the chat elements
+        const chatForm = document.getElementById('chat-form');
+        const userInput = document.getElementById('user-input');
+        const chatHistory = document.getElementById('chat-history');
+        const sendButton = document.getElementById('send-button');
+
+        const toldJokes = new Set();
+        
+        const apiKey = "AIzaSyAoQw6n1tmS7qy70ETJ07oPGLJaoB_CWPw";
+        const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`;
+
+        let isLoading = false;
+
+        /**
+         * Adds a new message to the chat history.
+         * @param {string} text The message content.
+         * @param {string} sender "user" or "bot".
+         */
+        function addMessage(text, sender) {
+            const messageElement = document.createElement('div');
+            messageElement.classList.add('chat-message');
+            if (sender === 'user') {
+                messageElement.classList.add('user-message');
+            } else {
+                messageElement.classList.add('bot-message');
+            }
+            messageElement.textContent = text;
+            chatHistory.appendChild(messageElement);
+            // Scroll to the bottom to show the latest message
+            chatHistory.scrollTop = chatHistory.scrollHeight;
+        }
+
+        /**
+         * Fetches a joke from the Gemini API based on a keyword and displays it.
+         * @param {string} keyword The user-provided keyword.
+         */
+        async function fetchJokeAndDisplay(keyword) {
+            if (isLoading) return;
+            isLoading = true;
+            userInput.disabled = true;
+            sendButton.disabled = true;
+
+            const typingIndicator = document.createElement('div');
+            typingIndicator.classList.add('chat-message', 'bot-message');
+            typingIndicator.textContent = 'Bot is thinking...';
+            chatHistory.appendChild(typingIndicator);
+            chatHistory.scrollTop = chatHistory.scrollHeight;
+
+            try {
+                let joke = null;
+                let attempts = 0;
+                const maxAttempts = 5;
+
+                while (!joke && attempts < maxAttempts) {
+                    attempts++;
+                    const userQuery = `Write a short, single-part, family-friendly joke about ${keyword}.`;
+                    const systemPrompt = "You are a witty, friendly comedian. Your only purpose is to write short, single-part jokes that are family-friendly. Respond with only the joke text and nothing else.";
+
+                    const payload = {
+                        contents: [{ parts: [{ text: userQuery }] }],
+                        systemInstruction: { parts: [{ text: systemPrompt }] },
+                    };
+
+                    const response = await fetch(apiUrl, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+
+                    const result = await response.json();
+                    const generatedText = result?.candidates?.[0]?.content?.parts?.[0]?.text;
+
+                    if (generatedText && !toldJokes.has(generatedText)) {
+                        joke = generatedText;
+                        toldJokes.add(joke);
+                    }
+                }
+
+                const typingIndicatorElement = chatHistory.querySelector('.chat-message:last-child');
+                if (typingIndicatorElement && typingIndicatorElement.textContent === 'Bot is thinking...') {
+                    chatHistory.removeChild(typingIndicatorElement);
+                }
+
+                if (joke) {
+                    addMessage(joke, 'bot');
+                } else {
+                    addMessage("I'm sorry, I've run out of fresh jokes for that topic. Please try another keyword!", 'bot');
+                }
+
+            } catch (e) {
+                console.error("An error occurred:", e);
+                const typingIndicatorElement = chatHistory.querySelector('.chat-message:last-child');
+                if (typingIndicatorElement && typingIndicatorElement.textContent === 'Bot is thinking...') {
+                    chatHistory.removeChild(typingIndicatorElement);
+                }
+                if (e.message.includes('400')) {
+                    addMessage("Hmm, that keyword might be too difficult. Could you try a different one?", 'bot');
+                } else if (e.message.includes('500')) {
+                    addMessage("The joke server is a bit sleepy right now. Please try again in a few moments.", 'bot');
+                } else {
+                    addMessage("It looks like there's a network issue. Please check your internet connection.", 'bot');
+                }
+            } finally {
+                isLoading = false;
+                userInput.disabled = false;
+                sendButton.disabled = false;
+                userInput.focus();
+            }
+        }
+
+        // Add an event listener to the form to handle user input
+        chatForm.addEventListener('submit', (event) => {
+            event.preventDefault();
+
+            const userText = userInput.value.trim();
+            if (userText === '') return;
+
+            addMessage(userText, 'user');
+            fetchJokeAndDisplay(userText);
+            userInput.value = '';
+        });
+
+    </script>
+</body>
+</html>
